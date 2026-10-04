@@ -1,172 +1,216 @@
-import { useState, useEffect, useCallback } from 'react';
-import { SAMPLE_ENGINES } from './sampleData.js';
-import EngineVisualization from './EngineVisualization.jsx';
-import SensorPanel from './SensorPanel.jsx';
-import HealthStatus from './HealthStatus.jsx';
-import AnomalyAlert from './AnomalyAlert.jsx';
-import ReplaySlider from './ReplaySlider.jsx';
-import MaintenanceScheduler from './MaintenanceScheduler.jsx';
+import React, { useState, useEffect } from 'react';
+import EngineCrossSection from './components/EngineCrossSection';
+import SensorInfoStrip from './components/SensorInfoStrip';
+import DiagnosticsPanel from './components/DiagnosticsPanel';
+import './App.css';
 
-const STAGE_LABEL = { 0: 'Healthy', 1: 'Degrading', 2: 'Critical' };
-const STAGE_COLOR = { 0: '#10b981', 1: '#f59e0b', 2: '#ef4444' };
-
-function Card({ children, style = {} }) {
-  return (
-    <div style={{
-      background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(12px)',
-      border: '1px solid #1e293b', borderRadius: '14px', padding: '20px',
-      ...style
-    }}>
-      {children}
-    </div>
-  );
-}
+const API_URL = 'http://localhost:5000/api';
 
 export default function App() {
-  const [selectedEngineIdx, setSelectedEngineIdx] = useState(0);
-  const [cycle, setCycle] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [engineId, setEngineId] = useState(1);
+  const [currentCycle, setCurrentCycle] = useState(1);
+  const [engineData, setEngineData] = useState(null);
+  const [prediction, setPrediction] = useState(null);
+  const [activeStation, setActiveStation] = useState('hpc');
+  const [loading, setLoading] = useState(true);
+  const [apiOk, setApiOk] = useState(false);
 
-  const engine = SAMPLE_ENGINES[selectedEngineIdx];
-  const frameData = engine.cycles[Math.min(cycle - 1, engine.cycles.length - 1)];
-
-  // Auto-play
+  // Check API health
   useEffect(() => {
-    if (!isPlaying) return;
-    const t = setInterval(() => {
-      setCycle(c => {
-        if (c >= engine.maxCycles) { setIsPlaying(false); return c; }
-        return c + 1;
+    fetch(`${API_URL}/health`)
+      .then(r => r.json())
+      .then(d => setApiOk(d.status === 'ok'))
+      .catch(() => setApiOk(false));
+  }, []);
+
+  // Load engine history
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${API_URL}/engine/${engineId}/history`)
+      .then(r => r.json())
+      .then(data => {
+        setEngineData(data);
+        setCurrentCycle(1);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error('Failed to load engine data:', e);
+        setLoading(false);
       });
-    }, 80);
-    return () => clearInterval(t);
-  }, [isPlaying, engine.maxCycles]);
+  }, [engineId]);
 
-  // Reset cycle when engine changes
-  useEffect(() => { setCycle(1); setIsPlaying(false); }, [selectedEngineIdx]);
+  // Predict for current cycle
+  useEffect(() => {
+    if (!engineData || currentCycle > engineData.history.length) return;
+    const cycleData = engineData.history[currentCycle - 1];
+    if (!cycleData) return;
 
-  const togglePlay = useCallback(() => setIsPlaying(p => !p), []);
+    fetch(`${API_URL}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        engine_id: engineId,
+        cycle: currentCycle,
+        sensor_values: cycleData.sensors
+      }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.error) setPrediction(data);
+      })
+      .catch(console.error);
+  }, [engineData, currentCycle, engineId]);
 
-  const stageColor = STAGE_COLOR[frameData.health_stage] ?? '#10b981';
+  // Current sensor values
+  const currentHistoryEntry = engineData?.history[currentCycle - 1] ?? null;
+  const sensorValues = currentHistoryEntry?.sensors ?? null;
+  const physicalSensors = currentHistoryEntry?.physical_sensors ?? null;
+  const totalCycles = engineData?.total_cycles ?? engineData?.history?.length ?? 200;
+
+  // Health status
+  const healthStage = prediction?.health_stage ?? 0;
+  const healthLabel = prediction?.health_label ?? 'Healthy';
+  const healthClass = healthStage === 2 ? 'critical' : healthStage === 1 ? 'degrading' : 'healthy';
+
+  const primaryDriver = prediction?.primary_driver;
+  const hasThresholdAlert = Boolean(prediction?.has_active_breach && primaryDriver && primaryDriver.status !== 'NORMAL');
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: 'var(--accent)', fontFamily: "'JetBrains Mono', monospace" }}>
+          Loading real CFM56-5B4 telemetry from NASA C-MAPSS...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%)', color: '#e2e8f0', fontFamily: "'Inter', sans-serif", padding: '0' }}>
+    <div className="app">
+      {/* Dynamic Threshold & Anomaly Alert Banner - ONLY rendered on true alert/breach */}
+      {hasThresholdAlert && (
+        <div className={`anomaly-alert ${primaryDriver.status === 'CRITICAL_REDLINE' ? 'critical-banner' : 'warning-banner'}`}>
+          <span className="alert-symbol">&#9888;</span>
+          <div className="alert-text-group">
+            <span className="alert-status-tag">
+              {primaryDriver.status === 'CRITICAL_REDLINE' ? 'CRITICAL THRESHOLD BREACH' : 'ELEVATED THERMAL/PRESSURE WARNING'}
+            </span>
+            <span className="alert-msg">
+              <strong>{primaryDriver.sensor} ({primaryDriver.full_name}):</strong> currently at <strong>{primaryDriver.value} {primaryDriver.unit}</strong> (Limit: {primaryDriver.crit_threshold} {primaryDriver.unit}).
+              {' '}{primaryDriver.diagnosis}
+            </span>
+          </div>
+          <button
+            className="alert-action-btn"
+            onClick={() => primaryDriver.station && setActiveStation(primaryDriver.station)}
+          >
+            Inspect {primaryDriver.station?.toUpperCase()}
+          </button>
+        </div>
+      )}
 
-      {/* ── Header ── */}
-      <header style={{ padding: '16px 24px', borderBottom: '1px solid #1e293b', background: 'rgba(2,6,23,0.8)', backdropFilter: 'blur(16px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>✈️</div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '16px', letterSpacing: '-0.02em' }}>JetTwin</div>
-            <div style={{ fontSize: '11px', color: '#475569' }}>AI-Powered Jet Engine Digital Twin · NASA C-MAPSS FD001</div>
+      {/* ---- HEADER ---- */}
+      <header className="header">
+        <div className="header-brand">
+          <div className="dot" style={{
+            background: healthStage === 2 ? 'var(--critical)' :
+                        healthStage === 1 ? 'var(--degrading)' : 'var(--healthy)',
+            boxShadow: `0 0 10px ${healthStage === 2 ? 'var(--critical)' : healthStage === 1 ? 'var(--degrading)' : 'var(--healthy)'}`,
+          }} />
+          <div className="brand-titles">
+            <h1>CFM56-5B4 Digital Twin</h1>
+            <span className="brand-sub">Predictive Health Monitoring & Diagnostic Decision Support</span>
           </div>
         </div>
 
-        {/* Live status pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', background: `${stageColor}22`, border: `1px solid ${stageColor}55` }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: stageColor, boxShadow: `0 0 6px ${stageColor}`, display: 'inline-block' }} />
-          <span style={{ fontSize: '12px', fontWeight: 600, color: stageColor }}>{STAGE_LABEL[frameData.health_stage]}</span>
-          <span style={{ fontSize: '11px', color: '#64748b' }}>— {engine.name}</span>
+        <div className="header-controls">
+          <div className="control-group">
+            <label>ENGINE TAIL #</label>
+            <input
+              type="number"
+              value={engineId}
+              onChange={e => setEngineId(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+              min="1" max="100"
+            />
+          </div>
+          <div className="control-group">
+            <label>FLIGHT CYCLE</label>
+            <input
+              type="number"
+              value={currentCycle}
+              onChange={e => setCurrentCycle(Math.max(1, Math.min(totalCycles, parseInt(e.target.value) || 1)))}
+              min="1" max={totalCycles}
+            />
+          </div>
+        </div>
+
+        <div className="header-status">
+          <div className={`status-chip ${healthClass}`}>
+            <span style={{ fontSize: 8 }}>&#9679;</span>
+            {healthLabel.toUpperCase()}
+          </div>
+          <span style={{ color: 'var(--text-muted)' }}>
+            PREDICTED RUL: <span className="mono" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+              {Math.round(prediction?.rul ?? 0)} cycles
+            </span>
+          </span>
+          <span style={{ color: apiOk ? 'var(--healthy)' : 'var(--critical)', fontSize: 10, fontFamily: 'monospace' }}>
+            {apiOk ? '● LIVE C-MAPSS' : '○ API OFFLINE'}
+          </span>
         </div>
       </header>
 
-      {/* ── Engine selector ── */}
-      <div style={{ padding: '16px 24px', display: 'flex', gap: '10px', overflowX: 'auto', borderBottom: '1px solid #1e293b' }}>
-        {SAMPLE_ENGINES.map((e, i) => {
-          const last = e.cycles[e.cycles.length - 1];
-          const c = STAGE_COLOR[last.health_stage];
-          return (
-            <button key={e.id} onClick={() => setSelectedEngineIdx(i)}
-              style={{
-                padding: '8px 16px', borderRadius: '8px', border: `1px solid ${i === selectedEngineIdx ? c : '#1e293b'}`,
-                background: i === selectedEngineIdx ? `${c}22` : '#0f172a',
-                color: i === selectedEngineIdx ? c : '#94a3b8',
-                cursor: 'pointer', fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
-              }}>
-              {e.name}
-            </button>
-          );
-        })}
+      {/* ---- MAIN WORKSPACE ---- */}
+      <div className="workspace">
+        <div className="workspace-left">
+          {/* Engine cross-section SVG with physical station mapping */}
+          <div className="engine-viewport">
+            <EngineCrossSection
+              activeStation={activeStation}
+              onStationClick={setActiveStation}
+              prediction={prediction}
+              sensorValues={sensorValues}
+            />
+          </div>
+
+          {/* Sensor strip below the engine with real engineering units and threshold flags */}
+          <SensorInfoStrip
+            activeStation={activeStation}
+            onStationClick={setActiveStation}
+            sensorValues={sensorValues}
+            physicalSensors={physicalSensors}
+            prediction={prediction}
+          />
+        </div>
+
+        {/* Right diagnostics panel with physical root causes and threshold meters */}
+        <DiagnosticsPanel
+          prediction={prediction}
+          historyData={engineData?.history ?? []}
+          currentCycle={currentCycle}
+          onSelectStation={setActiveStation}
+        />
       </div>
 
-      {/* ── Main Grid ── */}
-      <main style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-
-        {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-          {/* Engine Visualization */}
-          <Card>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
-              Engine Diagram — {engine.name}
-            </div>
-            <EngineVisualization zoneHealth={frameData.zone_health} healthStage={frameData.health_stage} />
-          </Card>
-
-          {/* Timeline Scrubber */}
-          <Card>
-            <ReplaySlider
-              cycle={cycle}
-              maxCycles={engine.maxCycles}
-              onChange={setCycle}
-              isPlaying={isPlaying}
-              onTogglePlay={togglePlay}
-            />
-          </Card>
-
-          {/* Anomaly Alert */}
-          <Card>
-            <AnomalyAlert isAnomalous={frameData.is_anomalous} rul={frameData.rul} />
-          </Card>
-
-          {/* Maintenance Scheduler */}
-          <Card>
-            <MaintenanceScheduler rul={frameData.rul} healthStage={frameData.health_stage} isAnomalous={frameData.is_anomalous} />
-          </Card>
+      {/* ---- TIMELINE + FOOTER ---- */}
+      <footer className="footer">
+        <div className="timeline-row">
+          <span className="cycle-indicator-badge">CYCLE {currentCycle}</span>
+          <input
+            type="range"
+            min="1"
+            max={totalCycles}
+            value={currentCycle}
+            onChange={e => setCurrentCycle(parseInt(e.target.value))}
+            className="cycle-slider"
+          />
+          <span className="timeline-label">
+            {currentCycle} / {totalCycles} max cycles before failure
+          </span>
         </div>
-
-        {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Health Status */}
-          <Card>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
-              Health Status
-            </div>
-            <HealthStatus healthStage={frameData.health_stage} rul={frameData.rul} confidence={frameData.confidence} maxCycles={engine.maxCycles} />
-          </Card>
-
-          {/* Sensor Panel */}
-          <Card>
-            <SensorPanel topSensors={frameData.top_sensors} importanceScores={frameData.importance} sensorValues={frameData.sensors} />
-          </Card>
-
-          {/* Metrics summary */}
-          <Card>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
-              Model Metrics (FD001)
-            </div>
-            {[
-              { label: 'Naive Bayes F1',       value: '0.872', color: '#10b981' },
-              { label: 'Decision Tree F1',      value: '0.599', color: '#f59e0b' },
-              { label: 'Best Silhouette (K=2)', value: '0.052', color: '#7dd3fc' },
-              { label: 'Anomaly Precision',     value: '1.000', color: '#10b981' },
-              { label: 'Anomaly Recall',        value: '0.148', color: '#f97316' },
-              { label: 'RUL RMSE',              value: '81.2',  color: '#7dd3fc' },
-              { label: 'Cost Savings',          value: '17.0%', color: '#10b981' },
-            ].map(m => (
-              <div key={m.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #1e293b' }}>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{m.label}</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '13px', fontWeight: 700, color: m.color }}>{m.value}</span>
-              </div>
-            ))}
-          </Card>
+        <div className="footer-meta">
+          <span>LSTM Sequence + IForest + TreeSHAP | 21 Sensors</span>
         </div>
-      </main>
-
-      {/* ── Footer ── */}
-      <footer style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#334155', borderTop: '1px solid #1e293b', marginTop: '10px' }}>
-        JetTwin · AI-Powered Digital Twin · NASA C-MAPSS FD001 · DWM Mini-Project 2026 · Research: Saxena 2008, Özcan 2025
       </footer>
     </div>
   );
