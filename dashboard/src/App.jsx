@@ -50,8 +50,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         engine_id: engineId,
-        cycle: currentCycle,
-        sensor_values: cycleData.sensors
+        cycle: currentCycle
       }),
     })
       .then(r => r.json())
@@ -59,7 +58,7 @@ export default function App() {
         if (!data.error) setPrediction(data);
       })
       .catch(console.error);
-  }, [engineData, currentCycle, engineId]);
+  }, [engineId, currentCycle]);
 
   // Current sensor values
   const currentHistoryEntry = engineData?.history[currentCycle - 1] ?? null;
@@ -209,7 +208,7 @@ export default function App() {
           </span>
         </div>
         <div className="footer-meta">
-          <span>LSTM Sequence + IForest + TreeSHAP | 21 Sensors</span>
+          <span>LSTM Sequence + IForest + TreeSHAP | 21 Turbofan Sensors</span>
         </div>
       </footer>
     </div>

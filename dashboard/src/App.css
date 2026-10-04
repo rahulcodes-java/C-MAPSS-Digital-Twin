@@ -815,7 +815,7 @@ code, .mono {
   font-size: 11px;
   color: var(--text-muted);
   font-family: 'JetBrains Mono', monospace;
-  gap: 24px;
+  gap: 2rem;
   overflow: hidden;
 }
 
@@ -824,6 +824,7 @@ code, .mono {
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
   max-width: 620px;
 }
 
@@ -864,7 +865,9 @@ code, .mono {
   font-size: 10px;
   color: var(--text-muted);
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }
 
 .footer-meta {

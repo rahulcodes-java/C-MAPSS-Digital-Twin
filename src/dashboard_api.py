@@ -25,14 +25,16 @@ feature_importance_dict = dict(zip(feature_importance_df['Sensor'], feature_impo
 with open('data/processed/FD001_scaler.pkl', 'rb') as f:
     scaler = pickle.load(f)
 
-# Load real cleaned dataset for genuine engine history
-DATA_FILE = 'data/processed/FD001_train_cleaned.csv'
-if os.path.exists(DATA_FILE):
-    df_raw_train = pd.read_csv(DATA_FILE)
-    print(f"Loaded {len(df_raw_train)} real engine cycles from {DATA_FILE}")
-else:
-    df_raw_train = None
-    print(f"Warning: {DATA_FILE} not found!")
+# Load real cleaned datasets for genuine engine history and real-time prediction
+TRAIN_DATA_FILE = 'data/processed/FD001_train_cleaned.csv'
+TEST_DATA_FILE = 'data/processed/FD001_test_cleaned.csv'
+
+df_raw_train = pd.read_csv(TRAIN_DATA_FILE) if os.path.exists(TRAIN_DATA_FILE) else None
+df_raw_test = pd.read_csv(TEST_DATA_FILE) if os.path.exists(TEST_DATA_FILE) else None
+if df_raw_train is not None:
+    print(f"Loaded {len(df_raw_train)} train engine cycles from {TRAIN_DATA_FILE}")
+if df_raw_test is not None:
+    print(f"Loaded {len(df_raw_test)} test engine cycles from {TEST_DATA_FILE}")
 
 # 21 Sensor columns matching scaler feature order
 SENSOR_COLUMNS = list(scaler.feature_names_in_) if hasattr(scaler, 'feature_names_in_') else [
@@ -382,77 +384,91 @@ def get_health():
 def predict():
     """
     Predict RUL, anomaly, and health stage for sensor readings.
-    Takes optional engine_id and cycle to provide temporal sequence integrity.
+    Accepts: { "engine_id": int, "cycle": int }
+    Fallback: { "sensor_values": { ... } }
     """
     try:
-        data = request.json
-        sensor_values = data.get('sensor_values', {})
+        data = request.json or {}
         engine_id = data.get('engine_id', None)
         cycle = data.get('cycle', None)
+        sensor_values = data.get('sensor_values', None)
 
-        # Normalize input array in exact SENSOR_COLUMNS order
-        sensor_array = np.array([sensor_values.get(s, 0.5) for s in SENSOR_COLUMNS], dtype=float).reshape(1, -1)
-
-        # Unscale to real physical engineering units
-        try:
-            phys_values_arr = scaler.inverse_transform(sensor_array)[0]
-            phys_dict = {s: float(phys_values_arr[i]) for i, s in enumerate(SENSOR_COLUMNS)}
-        except Exception:
-            phys_dict = {s: float(sensor_values.get(s, 0.5)) for s in SENSOR_COLUMNS}
-
-        # Check if we have exact dataset match for temporal sequence and ground truth
-        true_rul = None
-        true_health = None
-        if df_raw_train is not None and engine_id is not None and cycle is not None:
-            match = df_raw_train[(df_raw_train['engine_id'] == int(engine_id)) & (df_raw_train['cycle'] == int(cycle))]
-            if not match.empty:
-                true_rul = float(match.iloc[0]['RUL'])
-                true_health = int(match.iloc[0].get('health_stage', 0))
-
-        # LSTM sequence prediction
         seq_length = 50
-        # If we have real preceding cycles, extract them for high-fidelity temporal inference
-        if df_raw_train is not None and engine_id is not None and cycle is not None:
-            engine_subset = df_raw_train[df_raw_train['engine_id'] == int(engine_id)].sort_values('cycle')
-            current_idx = engine_subset[engine_subset['cycle'] <= int(cycle)].tail(seq_length)
-            seq_vals = current_idx[SENSOR_COLUMNS].values
-            if len(seq_vals) < seq_length:
-                # Pad earlier cycles with the earliest available
-                pad_count = seq_length - len(seq_vals)
-                pad_block = np.repeat(seq_vals[0:1], pad_count, axis=0)
-                seq_vals = np.vstack([pad_block, seq_vals])
-            X_seq = seq_vals.reshape(1, seq_length, len(SENSOR_COLUMNS))
-        else:
+        true_rul = None
+        window_len_used = 0
+
+        # Try to resolve engine from cached dataframes (check train first to match /api/engine history, then test)
+        df_source = None
+        if engine_id is not None and cycle is not None:
+            engine_id = int(engine_id)
+            cycle = int(cycle)
+
+            if df_raw_train is not None and engine_id in df_raw_train['engine_id'].values:
+                cand = df_raw_train[df_raw_train['engine_id'] == engine_id]
+                if cycle in cand['cycle'].values:
+                    df_source = cand
+            if df_source is None and df_raw_test is not None and engine_id in df_raw_test['engine_id'].values:
+                cand = df_raw_test[df_raw_test['engine_id'] == engine_id]
+                if cycle in cand['cycle'].values:
+                    df_source = cand
+
+        if df_source is not None:
+            engine_sorted = df_source.sort_values('cycle')
+            history_slice = engine_sorted[engine_sorted['cycle'] <= cycle]
+            window = history_slice.tail(seq_length)
+            window_len_used = int(len(window))
+            vals = window[SENSOR_COLUMNS].values
+
+            if len(vals) < seq_length:
+                pad_count = seq_length - len(vals)
+                pad = np.repeat(vals[0:1], pad_count, axis=0)
+                vals = np.vstack([pad, vals])
+
+            X_seq = vals.reshape(1, seq_length, len(SENSOR_COLUMNS))
+            last_row = vals[-1:].reshape(1, len(SENSOR_COLUMNS))
+
+            matched_cycle = df_source[df_source['cycle'] == cycle]
+            if not matched_cycle.empty and 'RUL' in matched_cycle.columns:
+                true_rul = float(matched_cycle.iloc[0]['RUL'])
+        elif sensor_values:
+            # Fallback when only sensor_values is provided
+            sensor_array = np.array([sensor_values.get(s, 0.5) for s in SENSOR_COLUMNS], dtype=float).reshape(1, -1)
             X_seq = np.repeat(sensor_array, seq_length, axis=0).reshape(1, seq_length, len(SENSOR_COLUMNS))
-
-        rul_pred = lstm_model.predict(X_seq, verbose=0)
-        lstm_rul = max(0.0, float(rul_pred[0][0]))
-
-        # Final RUL: use model prediction, aligned with temporal integrity
-        if true_rul is not None:
-            # Blend gracefully to avoid artificial sequence repeat artifacts
-            rul = true_rul
+            last_row = sensor_array
+            window_len_used = 1
         else:
-            rul = lstm_rul
+            return jsonify({'error': 'Missing engine_id/cycle or sensor_values in request body'}), 400
 
-        # Anomaly detection (Isolation Forest)
-        anomaly_pred = iforest_model.predict(sensor_array)
-        is_anomaly = anomaly_pred[0] == -1
-        anomaly_score = float(iforest_model.score_samples(sensor_array)[0])
+        # LSTM prediction clipped to [0, 125] to match training cap
+        raw_pred = float(lstm_model.predict(X_seq, verbose=0)[0][0])
+        predicted_rul = float(np.clip(raw_pred, 0, 125))
 
-        # Health stage classification (Random Forest)
-        if true_health is not None and cycle == 1:
-            health_stage = 0
-            is_anomaly = False
+        # IForest and RF using last_row (shape (1, 21))
+        anomaly_pred = iforest_model.predict(last_row)
+        is_anomaly = bool(anomaly_pred[0] == -1)
+        anomaly_score = float(iforest_model.score_samples(last_row)[0])
+
+        rf_stage = int(rf_model.predict(last_row)[0])
+
+        # rul_stage derived from predicted RUL: >100 -> 0, 30-100 -> 1, <=30 -> 2
+        if predicted_rul > 100:
+            rul_stage = 0
+        elif predicted_rul > 30:
+            rul_stage = 1
         else:
-            health_pred = rf_model.predict(sensor_array)
-            health_stage = int(health_pred[0])
-            if rul > 100:
-                health_stage = 0
-                is_anomaly = False
+            rul_stage = 2
 
+        # Keep health_stage = rf_stage for now. Do NOT silently override it.
+        health_stage = rf_stage
         health_labels = {0: 'Healthy', 1: 'Degrading', 2: 'Critical'}
         health_label = health_labels.get(health_stage, 'Unknown')
+
+        # Compute physical readings for frontend displays
+        try:
+            phys_values_arr = scaler.inverse_transform(last_row)[0]
+            phys_dict = {s: float(phys_values_arr[i]) for i, s in enumerate(SENSOR_COLUMNS)}
+        except Exception:
+            phys_dict = {s: float(last_row[0][i]) for i, s in enumerate(SENSOR_COLUMNS)}
 
         # Feature importance ranking
         top_sensors = sorted(feature_importance_dict.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -470,18 +486,15 @@ def predict():
             diag['importance'] = round(feature_importance_dict.get(s, 0.0), 2)
             sensor_diagnostics.append(diag)
 
-        # Degraded sensors (Warning or Critical)
         degraded = [d for d in sensor_diagnostics if d['status'] in ('CRITICAL_REDLINE', 'WARNING')]
 
         if degraded:
-            # Sort degraded: Critical first, then Warning, then by SHAP importance
             degraded.sort(
                 key=lambda x: (2 if x['status'] == 'CRITICAL_REDLINE' else 1, x['importance']),
                 reverse=True
             )
             primary_driver = degraded[0]
         else:
-            # All sensors are NORMAL!
             top_shap_sensor = sensor_diagnostics[0]
             primary_driver = {
                 'sensor': top_shap_sensor['sensor'],
@@ -500,10 +513,15 @@ def predict():
             }
 
         return jsonify({
-            'rul': rul,
+            'rul': round(predicted_rul, 1),
+            'predicted_rul': round(predicted_rul, 1),
+            'true_rul': true_rul,
+            'window_len_used': window_len_used,
+            'rf_stage': rf_stage,
+            'rul_stage': rul_stage,
             'health_stage': health_stage,
             'health_label': health_label,
-            'is_anomaly': bool(is_anomaly),
+            'is_anomaly': is_anomaly,
             'anomaly_score': anomaly_score,
             'inspection_area': inspection_area,
             'confidence': 0.92 if health_stage == 0 else 0.88,
