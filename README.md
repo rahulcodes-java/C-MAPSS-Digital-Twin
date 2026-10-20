@@ -33,21 +33,30 @@ Sensors (21 channels) → Intelligence Layer (ML) → Prediction Layer → React
 
 ## Quick Start
 
-### Python Pipeline
-```bash
-pip install -r requirements.txt
-# Add real data: data/raw/train_FD001.txt, test_FD001.txt, RUL_FD001.txt
-cd src
-python main.py
+### Option 1: One-Click Launch (Recommended)
+Simply double-click [`run_project.bat`](file:///c:/College/SEM-5/dwm-project/C-MAPSS-Digital-Twin/run_project.bat) or run from PowerShell:
+```powershell
+.\run_project.ps1
 ```
+This automatically starts both the Flask API server and Vite dashboard, then opens `http://127.0.0.1:5173` in your browser.
 
-### Dashboard
+---
+
+### Option 2: Manual Terminal Launch
+
+**Terminal 1 — Python Flask API Backend (Port 5000):**
+```bash
+python src/dashboard_api.py
+```
+*Loads TensorFlow LSTM, Random Forest + TreeSHAP, and Isolation Forest models on port 5000.*
+
+**Terminal 2 — React / Vite Dashboard (Port 5173):**
 ```bash
 cd dashboard
-npm install
-npm run dev
-# Open http://localhost:5173
+npm install       # (Only needed once)
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
+*Open [http://127.0.0.1:5173](http://127.0.0.1:5173) in your browser.*
 
 ---
 

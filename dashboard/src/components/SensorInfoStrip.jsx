@@ -3,9 +3,8 @@ import { STATIONS } from './EngineCrossSection';
 
 /**
  * SensorInfoStrip.jsx
- * Sits directly below the CFM56 engine cross-section.
- * Shows real-time physical engineering readings (with units: °R, psia, rpm)
- * and threshold health indicators for each engine station.
+ * Clean, readable sensor telemetry strip below the engine schematic.
+ * Displays key sensors for each engine station with live values and status badges.
  */
 export default function SensorInfoStrip({
   activeStation,
@@ -21,105 +20,72 @@ export default function SensorInfoStrip({
     });
   }
 
-  const getSensorDisplay = (sensorName) => {
-    const diag = diagMap[sensorName];
+  const getSensorValue = (sensor) => {
+    const sName = sensor.name;
+    const diag = diagMap[sName];
     if (diag && diag.value !== undefined) {
       return {
-        formatted: `${diag.value} ${diag.unit}`,
+        val: diag.value,
+        unit: diag.unit || sensor.unit,
         status: diag.status,
-        delta: diag.delta,
-        explanation: diag.diagnosis,
-        isPhysical: true,
       };
     }
-
-    if (physicalSensors && physicalSensors[sensorName] !== undefined) {
-      const val = physicalSensors[sensorName];
+    if (physicalSensors && physicalSensors[sName] !== undefined) {
       return {
-        formatted: `${val.toFixed(1)}`,
+        val: physicalSensors[sName].toFixed(1),
+        unit: sensor.unit,
         status: 'NORMAL',
-        delta: 0,
-        explanation: '',
-        isPhysical: true,
       };
     }
-
-    if (sensorValues && sensorValues[sensorName] !== undefined) {
-      return {
-        formatted: `${(sensorValues[sensorName] * 100).toFixed(1)}%`,
-        status: 'NORMAL',
-        delta: 0,
-        explanation: '',
-        isPhysical: false,
-      };
-    }
-
-    return { formatted: '--', status: 'NORMAL', delta: 0, explanation: '', isPhysical: false };
-  };
-
-  const getStationHealthColor = (station) => {
-    // Check if any sensor in this station has breached redline or warning
-    const hasRedline = station.sensors.some(s => diagMap[s.name]?.status === 'CRITICAL_REDLINE');
-    if (hasRedline) return 'var(--critical)';
-
-    const hasWarning = station.sensors.some(s => diagMap[s.name]?.status === 'WARNING');
-    if (hasWarning) return 'var(--degrading)';
-
-    const maxImp = station.sensors.reduce((m, s) => Math.max(m, s.importance), 0);
-    const hs = prediction?.health_stage ?? 0;
-    if (hs === 2 && maxImp > 8) return 'var(--critical)';
-    if (hs === 1 && maxImp > 8) return 'var(--degrading)';
-
-    return 'var(--healthy)';
+    return { val: '--', unit: sensor.unit, status: 'NORMAL' };
   };
 
   return (
-    <div className="sensor-info-strip">
-      {STATIONS.map(station => {
-        const healthColor = getStationHealthColor(station);
-        const isActive = activeStation === station.id;
+    <div className="simple-sensor-strip">
+      <div className="strip-title-row">
+        <span className="strip-header-title">Live Sensor Telemetry by Engine Section</span>
+        <span className="strip-header-sub">Click any section to inspect</span>
+      </div>
 
-        return (
-          <div
-            key={station.id}
-            className={`sensor-station ${isActive ? 'active' : ''}`}
-            onClick={() => onStationClick(station.id)}
-            style={{
-              borderColor: isActive ? 'var(--accent)' : (healthColor !== 'var(--healthy)' ? healthColor : undefined)
-            }}
-          >
-            <div className="station-label">
-              <span className="indicator" style={{ background: healthColor, boxShadow: `0 0 6px ${healthColor}` }} />
-              <span className="station-title">{station.shortLabel}</span>
-              <span className="station-sub">{station.label}</span>
-            </div>
+      <div className="stations-grid">
+        {STATIONS.map(station => {
+          const isActive = activeStation === station.id;
+          const hasCrit = station.sensors.some(s => diagMap[s.name]?.status === 'CRITICAL_REDLINE');
+          const hasWarn = station.sensors.some(s => diagMap[s.name]?.status === 'WARNING');
+          const borderClass = hasCrit ? 'station-crit' : hasWarn ? 'station-warn' : '';
 
-            <div className="station-sensors">
-              {station.sensors.map(sensor => {
-                const info = getSensorDisplay(sensor.name);
-                const isAlert = info.status === 'CRITICAL_REDLINE';
-                const isWarn = info.status === 'WARNING';
+          return (
+            <div
+              key={station.id}
+              className={`station-box ${isActive ? 'active-station' : ''} ${borderClass}`}
+              onClick={() => onStationClick(station.id)}
+            >
+              <div className="station-box-header">
+                <span className="station-box-name">{station.shortLabel}</span>
+                <span className={`status-indicator ${hasCrit ? 'crit' : hasWarn ? 'warn' : 'norm'}`}>
+                  {hasCrit ? 'CRITICAL' : hasWarn ? 'WARNING' : 'NORMAL'}
+                </span>
+              </div>
 
-                return (
-                  <div
-                    key={sensor.name}
-                    className={`sensor-row ${isAlert ? 'critical' : (isWarn ? 'warning' : '')}`}
-                    title={`${sensor.fullName}${info.explanation ? '\nDiagnosis: ' + info.explanation : ''}`}
-                  >
-                    <div className="sensor-header-left">
-                      <span className={`status-dot ${isAlert ? 'critical' : (isWarn ? 'warning' : 'healthy')}`} />
-                      <span className="name">{sensor.name}</span>
+              <div className="station-sensors-list">
+                {station.sensors.map(sensor => {
+                  const sInfo = getSensorValue(sensor);
+                  const isAbnormal = sInfo.status !== 'NORMAL';
+
+                  return (
+                    <div key={sensor.name} className={`sensor-item ${isAbnormal ? 'abnormal' : ''}`}>
+                      <span className="s-name">{sensor.name}</span>
+                      <span className="s-val mono">
+                        {sInfo.val} <span className="s-unit">{sInfo.unit}</span>
+                      </span>
                     </div>
-                    <span className="value mono">
-                      {info.formatted}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
