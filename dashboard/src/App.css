@@ -2684,8 +2684,11 @@ code, .mono {
 .simple-sensor-strip {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 14px 10px 14px;
+  gap: 6px;
+  padding: 6px 14px 8px 14px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .strip-title-row {
@@ -2814,6 +2817,287 @@ code, .mono {
 
 .sensor-item.abnormal .s-val {
   color: var(--degrading);
+  font-weight: 700;
+}
+
+/* ============================================================
+   NEW/FIXED CLASSES — VIVA 2026
+   ============================================================ */
+
+/* Loading screen */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Header RUL block */
+.header-rul-block {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.rul-small-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+
+.rul-small-val {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.rul-small-unit {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* API status */
+.api-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.api-status.ok {
+  color: var(--healthy);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.api-status.offline {
+  color: var(--critical);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Sensor crit/warn value colors */
+.s-val.crit-val {
+  color: var(--critical) !important;
+  font-weight: 700;
+}
+
+.s-val.warn-val {
+  color: var(--degrading) !important;
+  font-weight: 600;
+}
+
+.sensor-item.crit .s-name { color: var(--critical); font-weight: 600; }
+.sensor-item.warn .s-name { color: var(--degrading); font-weight: 600; }
+
+/* Fleet metric card — new structure */
+.fm-num {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+
+.fleet-metric-card.healthy .fm-num  { color: var(--healthy); }
+.fleet-metric-card.degrading .fm-num { color: var(--degrading); }
+.fleet-metric-card.critical .fm-num { color: var(--critical); }
+.fleet-metric-card.avg .fm-num      { color: var(--cyan); }
+
+.healthy-txt  { color: var(--healthy) !important; }
+.warn-txt     { color: var(--degrading) !important; }
+.crit-txt     { color: var(--critical) !important; }
+.accent-txt   { color: var(--cyan) !important; }
+
+/* Fleet-grid engine card RUL coloring */
+.fcard-rul-num.healthy-txt  { color: var(--healthy); }
+.fcard-rul-num.warn-txt     { color: var(--degrading); }
+.fcard-rul-num.crit-txt     { color: var(--critical); }
+
+/* fcard-action (dispatch status) */
+.fcard-action {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
+.fleet-engine-card.critical .fcard-action { color: var(--critical); }
+.fleet-engine-card.degrading .fcard-action { color: var(--degrading); }
+.fleet-engine-card.healthy .fcard-action { color: var(--healthy); }
+
+/* Fleet empty state */
+.fleet-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+/* Demo tag */
+.demo-tag {
+  color: var(--degrading);
+  font-style: italic;
+}
+
+/* Sensor chip importance text */
+.chip-imp {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-style: normal;
+  margin-left: 2px;
+}
+
+.engine-svg-simple {
+  width: 100%;
+  flex: 1;
+  min-height: 100px;
+  background: linear-gradient(180deg, #060d1a 0%, #0a1628 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+/* Engine schematic wrapper layout fix */
+.engine-schematic-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 14px;
+  gap: 6px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Workspace layout — flex column, engine fills remaining, sensor strip pinned bottom */
+.workspace-left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-subtle);
+  overflow: hidden;
+  height: 100%;
+}
+
+.engine-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Workspace grid */
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Slim cycle slider */
+.cycle-slider {
+  flex: 1;
+  min-width: 120px;
+  max-width: 300px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  outline: none;
+}
+
+.cycle-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(37,99,235,0.5);
+}
+
+/* Header Total Caps */
+.input-with-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.total-cap {
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* Dynamic Root Cause & Inspection Target */
+.diagnosis-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.diagnosis-area-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--cyan);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  letter-spacing: 0.4px;
+}
+
+.diagnosis-target-item {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.diagnosis-target-item span {
+  color: var(--degrading);
+  margin-right: 4px;
+}
+
+.diagnosis-target-item strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.station-code {
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(56, 189, 248, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  margin-right: 6px;
   font-weight: 700;
 }
 

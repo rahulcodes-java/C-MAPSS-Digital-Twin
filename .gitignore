@@ -13,6 +13,10 @@ env/
 # ==============================
 *.pkl
 *.joblib
+*.h5
+!models/*.pkl
+!models/*.joblib
+!models/*.h5
 
 # ==============================
 # ENVIRONMENT VARIABLES / SECRETS
@@ -59,3 +63,8 @@ data/interim/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ==============================
+# OFFICE TEMPORARY FILES
+# ==============================
+~$*

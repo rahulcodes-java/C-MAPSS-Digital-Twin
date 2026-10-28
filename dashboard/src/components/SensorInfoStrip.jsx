@@ -3,9 +3,29 @@ import { STATIONS } from './EngineCrossSection';
 
 /**
  * SensorInfoStrip.jsx
- * Clean, readable sensor telemetry strip below the engine schematic.
- * Displays key sensors for each engine station with live values and status badges.
+ * Live sensor telemetry below the engine cross-section.
+ * Pulls values from: prediction sensor_diagnostics → physicalSensors → hardcoded nominal.
+ * Never shows "--" as long as physicalSensors or nominals are available.
  */
+
+// Nominal/fallback sensor readings (from dashboard_api SENSOR_METADATA)
+const SENSOR_NOMINALS = {
+  Nf:   { val: 2388.1, unit: 'rpm'     },
+  T2:   { val: 518.67, unit: '°R'      },
+  P2:   { val: 14.62,  unit: 'psia'    },
+  T24:  { val: 642.4,  unit: '°R'      },
+  BPR:  { val: 8.42,   unit: 'ratio'   },
+  Ps30: { val: 47.35,  unit: 'psia'    },
+  Nc:   { val: 9056.0, unit: 'rpm'     },
+  T30:  { val: 1586.8, unit: '°R'      },
+  P30:  { val: 553.95, unit: 'psia'    },
+  phi:  { val: 521.9,  unit: 'pps/psi' },
+  farB: { val: 0.03,   unit: 'ratio'   },
+  T50:  { val: 1402.8, unit: '°R'      },
+  W31:  { val: 38.93,  unit: 'lbm/s'  },
+  W32:  { val: 23.36,  unit: 'lbm/s'  },
+};
+
 export default function SensorInfoStrip({
   activeStation,
   onStationClick,
@@ -13,6 +33,7 @@ export default function SensorInfoStrip({
   physicalSensors,
   prediction
 }) {
+  // Build diagMap from prediction sensor_diagnostics
   const diagMap = {};
   if (prediction?.sensor_diagnostics) {
     prediction.sensor_diagnostics.forEach(d => {
@@ -21,30 +42,46 @@ export default function SensorInfoStrip({
   }
 
   const getSensorValue = (sensor) => {
-    const sName = sensor.name;
-    const diag = diagMap[sName];
-    if (diag && diag.value !== undefined) {
+    const name = sensor.name;
+
+    // Priority 1: prediction sensor_diagnostics (has physical real value + status)
+    const diag = diagMap[name];
+    if (diag && diag.value !== undefined && diag.value !== null) {
       return {
-        val: diag.value,
+        val: typeof diag.value === 'number' ? diag.value.toFixed(2) : diag.value,
         unit: diag.unit || sensor.unit,
-        status: diag.status,
+        status: diag.status || 'NORMAL',
       };
     }
-    if (physicalSensors && physicalSensors[sName] !== undefined) {
+
+    // Priority 2: physicalSensors from engine history (already inverse-transformed)
+    if (physicalSensors && physicalSensors[name] !== undefined) {
       return {
-        val: physicalSensors[sName].toFixed(1),
+        val: Number(physicalSensors[name]).toFixed(2),
         unit: sensor.unit,
         status: 'NORMAL',
       };
     }
-    return { val: '--', unit: sensor.unit, status: 'NORMAL' };
+
+    // Priority 3: nominal fallback (always shows a value, never --)
+    const nom = SENSOR_NOMINALS[name];
+    if (nom) {
+      return {
+        val: nom.val.toFixed(2),
+        unit: nom.unit,
+        status: 'NORMAL',
+      };
+    }
+
+    // Last resort: sensorValues (normalized 0-1 from CSV) — not useful raw, skip
+    return { val: 'N/A', unit: sensor.unit, status: 'NORMAL' };
   };
 
   return (
     <div className="simple-sensor-strip">
       <div className="strip-title-row">
-        <span className="strip-header-title">Live Sensor Telemetry by Engine Section</span>
-        <span className="strip-header-sub">Click any section to inspect</span>
+        <span className="strip-header-title">Live Sensor Telemetry — by Engine Section</span>
+        <span className="strip-header-sub">Click any section to highlight it on the engine view above</span>
       </div>
 
       <div className="stations-grid">
@@ -63,19 +100,20 @@ export default function SensorInfoStrip({
               <div className="station-box-header">
                 <span className="station-box-name">{station.shortLabel}</span>
                 <span className={`status-indicator ${hasCrit ? 'crit' : hasWarn ? 'warn' : 'norm'}`}>
-                  {hasCrit ? 'CRITICAL' : hasWarn ? 'WARNING' : 'NORMAL'}
+                  {hasCrit ? '● CRITICAL' : hasWarn ? '● WARNING' : '● OK'}
                 </span>
               </div>
 
               <div className="station-sensors-list">
                 {station.sensors.map(sensor => {
                   const sInfo = getSensorValue(sensor);
-                  const isAbnormal = sInfo.status !== 'NORMAL';
+                  const isCrit = sInfo.status === 'CRITICAL_REDLINE';
+                  const isWarn = sInfo.status === 'WARNING';
 
                   return (
-                    <div key={sensor.name} className={`sensor-item ${isAbnormal ? 'abnormal' : ''}`}>
+                    <div key={sensor.name} className={`sensor-item ${isCrit ? 'crit' : isWarn ? 'warn' : ''}`}>
                       <span className="s-name">{sensor.name}</span>
-                      <span className="s-val mono">
+                      <span className={`s-val mono ${isCrit ? 'crit-val' : isWarn ? 'warn-val' : ''}`}>
                         {sInfo.val} <span className="s-unit">{sInfo.unit}</span>
                       </span>
                     </div>

@@ -1,0 +1,330 @@
+{
+  "shap_sensor_5runs": [
+    {
+      "sensor": "T2",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "T24",
+      "area": "LPC",
+      "mean_pct": 3.9875,
+      "sd_pct": 0.0636
+    },
+    {
+      "sensor": "T30",
+      "area": "HPC",
+      "mean_pct": 2.7848,
+      "sd_pct": 0.0605
+    },
+    {
+      "sensor": "T50",
+      "area": "LPT",
+      "mean_pct": 11.7727,
+      "sd_pct": 0.1671
+    },
+    {
+      "sensor": "P2",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "P15",
+      "area": "LPT",
+      "mean_pct": 0.0149,
+      "sd_pct": 0.0016
+    },
+    {
+      "sensor": "P30",
+      "area": "HPC",
+      "mean_pct": 9.7137,
+      "sd_pct": 0.1193
+    },
+    {
+      "sensor": "Nf",
+      "area": "Fan/Inlet",
+      "mean_pct": 1.7673,
+      "sd_pct": 0.0431
+    },
+    {
+      "sensor": "Nc",
+      "area": "HPC",
+      "mean_pct": 13.0125,
+      "sd_pct": 0.2439
+    },
+    {
+      "sensor": "epr",
+      "area": "Engine-Level",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "Ps30",
+      "area": "HPC",
+      "mean_pct": 14.254,
+      "sd_pct": 0.2263
+    },
+    {
+      "sensor": "phi",
+      "area": "Combustor",
+      "mean_pct": 9.2877,
+      "sd_pct": 0.0898
+    },
+    {
+      "sensor": "NRf",
+      "area": "Fan/Inlet",
+      "mean_pct": 2.3261,
+      "sd_pct": 0.0632
+    },
+    {
+      "sensor": "NRc",
+      "area": "HPC",
+      "mean_pct": 9.4121,
+      "sd_pct": 0.159
+    },
+    {
+      "sensor": "BPR",
+      "area": "LPC",
+      "mean_pct": 7.5678,
+      "sd_pct": 0.0608
+    },
+    {
+      "sensor": "farB",
+      "area": "Combustor",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "htBleed",
+      "area": "Combustor",
+      "mean_pct": 2.6631,
+      "sd_pct": 0.0504
+    },
+    {
+      "sensor": "Nf_dmd",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "PCNfR_dmd",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "W31",
+      "area": "HPT",
+      "mean_pct": 5.3641,
+      "sd_pct": 0.0678
+    },
+    {
+      "sensor": "W32",
+      "area": "LPT",
+      "mean_pct": 6.0715,
+      "sd_pct": 0.0586
+    }
+  ],
+  "shap_area_5runs": [
+    {
+      "area": "Combustor",
+      "mean_pct": 11.9508,
+      "sd_pct": 0.0811
+    },
+    {
+      "area": "Engine-Level",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "area": "Fan/Inlet",
+      "mean_pct": 4.0934,
+      "sd_pct": 0.1002
+    },
+    {
+      "area": "HPC",
+      "mean_pct": 49.1772,
+      "sd_pct": 0.1219
+    },
+    {
+      "area": "HPT",
+      "mean_pct": 5.3641,
+      "sd_pct": 0.0678
+    },
+    {
+      "area": "LPC",
+      "mean_pct": 11.5553,
+      "sd_pct": 0.0544
+    },
+    {
+      "area": "LPT",
+      "mean_pct": 17.8592,
+      "sd_pct": 0.1257
+    }
+  ],
+  "permutation_sensor_test": [
+    {
+      "sensor": "T2",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "T24",
+      "area": "LPC",
+      "mean_pct": 3.8456,
+      "sd_pct": 0.6021
+    },
+    {
+      "sensor": "T30",
+      "area": "HPC",
+      "mean_pct": 1.9143,
+      "sd_pct": 0.5898
+    },
+    {
+      "sensor": "T50",
+      "area": "LPT",
+      "mean_pct": 8.7546,
+      "sd_pct": 0.2661
+    },
+    {
+      "sensor": "P2",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "P15",
+      "area": "LPT",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0215
+    },
+    {
+      "sensor": "P30",
+      "area": "HPC",
+      "mean_pct": 7.782,
+      "sd_pct": 1.0384
+    },
+    {
+      "sensor": "Nf",
+      "area": "Fan/Inlet",
+      "mean_pct": 1.963,
+      "sd_pct": 0.3489
+    },
+    {
+      "sensor": "Nc",
+      "area": "HPC",
+      "mean_pct": 18.9006,
+      "sd_pct": 0.3985
+    },
+    {
+      "sensor": "epr",
+      "area": "Engine-Level",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "Ps30",
+      "area": "HPC",
+      "mean_pct": 20.978,
+      "sd_pct": 1.5325
+    },
+    {
+      "sensor": "phi",
+      "area": "Combustor",
+      "mean_pct": 10.5152,
+      "sd_pct": 0.5877
+    },
+    {
+      "sensor": "NRf",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.7919,
+      "sd_pct": 0.1671
+    },
+    {
+      "sensor": "NRc",
+      "area": "HPC",
+      "mean_pct": 12.6453,
+      "sd_pct": 0.8693
+    },
+    {
+      "sensor": "BPR",
+      "area": "LPC",
+      "mean_pct": 3.2323,
+      "sd_pct": 0.786
+    },
+    {
+      "sensor": "farB",
+      "area": "Combustor",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "htBleed",
+      "area": "Combustor",
+      "mean_pct": 1.0235,
+      "sd_pct": 0.368
+    },
+    {
+      "sensor": "Nf_dmd",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "PCNfR_dmd",
+      "area": "Fan/Inlet",
+      "mean_pct": 0.0,
+      "sd_pct": 0.0
+    },
+    {
+      "sensor": "W31",
+      "area": "HPT",
+      "mean_pct": 2.7374,
+      "sd_pct": 0.4068
+    },
+    {
+      "sensor": "W32",
+      "area": "LPT",
+      "mean_pct": 4.9164,
+      "sd_pct": 0.2397
+    }
+  ],
+  "permutation_area_test": [
+    {
+      "area": "Combustor",
+      "mean_pct": 11.5386
+    },
+    {
+      "area": "Engine-Level",
+      "mean_pct": 0.0
+    },
+    {
+      "area": "Fan/Inlet",
+      "mean_pct": 2.7549
+    },
+    {
+      "area": "HPC",
+      "mean_pct": 62.2202
+    },
+    {
+      "area": "HPT",
+      "mean_pct": 2.7374
+    },
+    {
+      "area": "LPC",
+      "mean_pct": 7.0778
+    },
+    {
+      "area": "LPT",
+      "mean_pct": 13.671
+    }
+  ],
+  "hpc_comparison": {
+    "shap_hpc_mean_pct": 49.18,
+    "shap_hpc_sd_pct": 0.12,
+    "permutation_hpc_pct": 62.22
+  }
+}

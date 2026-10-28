@@ -1,0 +1,160 @@
+{
+  "cohort_all": {
+    "cohort_name": "ALL_ENGINES (1-100)",
+    "engine_count": 100,
+    "degrading_rf": {
+      "count_evaluated": 100,
+      "never_detected_count": 0,
+      "mean_delay": 17.12,
+      "median_delay": 15.5,
+      "iqr_delay": 35.25
+    },
+    "degrading_lstm": {
+      "count_evaluated": 100,
+      "never_detected_count": 0,
+      "mean_delay": -10.57,
+      "median_delay": -2.0,
+      "iqr_delay": 41.5
+    },
+    "critical_rf": {
+      "count_evaluated": 100,
+      "never_detected_count": 0,
+      "mean_delay": 3.28,
+      "median_delay": 1.0,
+      "iqr_delay": 6.25
+    },
+    "critical_lstm": {
+      "count_evaluated": 100,
+      "never_detected_count": 0,
+      "mean_delay": -3.61,
+      "median_delay": -3.0,
+      "iqr_delay": 9.0
+    },
+    "critical_iforest": {
+      "count_evaluated": 100,
+      "never_detected_count": 0,
+      "mean_delay": -152.98,
+      "median_delay": -155.0,
+      "iqr_delay": 68.25
+    },
+    "paired_degrading_rf_minus_lstm": {
+      "count": 100,
+      "mean": 27.69,
+      "median": 21.0,
+      "iqr": 32.5,
+      "lstm_flags_first_count": 80,
+      "rf_flags_first_count": 19,
+      "same_cycle_count": 1,
+      "share_lstm_flags_first": 0.8
+    }
+  },
+  "cohort_in_sample": {
+    "cohort_name": "IN_SAMPLE_TRAIN (1-82)",
+    "engine_count": 82,
+    "degrading_rf": {
+      "count_evaluated": 82,
+      "never_detected_count": 0,
+      "mean_delay": 17.26,
+      "median_delay": 15.5,
+      "iqr_delay": 33.5
+    },
+    "degrading_lstm": {
+      "count_evaluated": 82,
+      "never_detected_count": 0,
+      "mean_delay": -9.68,
+      "median_delay": 0.0,
+      "iqr_delay": 38.25
+    },
+    "critical_rf": {
+      "count_evaluated": 82,
+      "never_detected_count": 0,
+      "mean_delay": 3.3,
+      "median_delay": 1.0,
+      "iqr_delay": 6.75
+    },
+    "critical_lstm": {
+      "count_evaluated": 82,
+      "never_detected_count": 0,
+      "mean_delay": -3.45,
+      "median_delay": -3.0,
+      "iqr_delay": 7.75
+    },
+    "critical_iforest": {
+      "count_evaluated": 82,
+      "never_detected_count": 0,
+      "mean_delay": -148.15,
+      "median_delay": -154.0,
+      "iqr_delay": 61.5
+    },
+    "paired_degrading_rf_minus_lstm": {
+      "count": 82,
+      "mean": 26.94,
+      "median": 21.0,
+      "iqr": 35.0,
+      "lstm_flags_first_count": 63,
+      "rf_flags_first_count": 18,
+      "same_cycle_count": 1,
+      "share_lstm_flags_first": 0.7683
+    }
+  },
+  "cohort_val_tail": {
+    "cohort_name": "HELD_OUT_VAL_TAIL (83-100)",
+    "engine_count": 18,
+    "degrading_rf": {
+      "count_evaluated": 18,
+      "never_detected_count": 0,
+      "mean_delay": 16.5,
+      "median_delay": 12.0,
+      "iqr_delay": 45.75
+    },
+    "degrading_lstm": {
+      "count_evaluated": 18,
+      "never_detected_count": 0,
+      "mean_delay": -14.61,
+      "median_delay": -10.0,
+      "iqr_delay": 49.0
+    },
+    "critical_rf": {
+      "count_evaluated": 18,
+      "never_detected_count": 0,
+      "mean_delay": 3.17,
+      "median_delay": 1.5,
+      "iqr_delay": 5.5
+    },
+    "critical_lstm": {
+      "count_evaluated": 18,
+      "never_detected_count": 0,
+      "mean_delay": -4.33,
+      "median_delay": -3.0,
+      "iqr_delay": 11.25
+    },
+    "critical_iforest": {
+      "count_evaluated": 18,
+      "never_detected_count": 0,
+      "mean_delay": -175.0,
+      "median_delay": -175.0,
+      "iqr_delay": 116.75
+    },
+    "paired_degrading_rf_minus_lstm": {
+      "count": 18,
+      "mean": 31.11,
+      "median": 26.5,
+      "iqr": 25.0,
+      "lstm_flags_first_count": 17,
+      "rf_flags_first_count": 1,
+      "same_cycle_count": 0,
+      "share_lstm_flags_first": 0.9444
+    }
+  },
+  "engine_1_summary": {
+    "total_cycles": 192,
+    "deg_true_cycle": 92,
+    "crit_true_cycle": 162,
+    "rf_deg_cycle": 149,
+    "lstm_deg_cycle": 98,
+    "rf_crit_cycle": 162,
+    "lstm_crit_cycle": 163,
+    "iforest_first_cycle": 132,
+    "paired_diff_deg_rf_minus_lstm": 51
+  }
+}

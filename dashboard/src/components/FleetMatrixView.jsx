@@ -2,213 +2,236 @@ import React, { useState } from 'react';
 
 /**
  * FleetMatrixView.jsx
- * Airline Fleet Health & Propulsion MRO Command Matrix
- * Active airworthiness tracking across 100 commercial CFM56-5B4 turbofans.
+ * 100-Engine Fleet Health Matrix for CFM56-5B4 Turbofan Fleet.
+ * Works even when API is offline — generates a synthetic fleet for demo.
  */
+
+// Generate a deterministic synthetic fleet when API data is unavailable
+function getSyntheticFleet() {
+  const fleet = [];
+  const seeds = [
+    112,45,78,23,167,89,34,201,55,98,
+    143,66,190,37,82,155,28,101,73,188,
+    44,130,17,95,162,51,119,86,174,39,
+    107,63,180,26,141,58,123,88,197,32,
+    115,70,185,41,100,77,152,19,135,93,
+    168,48,113,81,196,35,102,69,146,24,
+    137,84,173,50,118,75,160,30,148,87,
+    195,42,109,66,182,53,126,91,169,38,
+    111,79,154,22,140,67,183,46,124,85,
+    198,31,104,71,144,57,121,80,166,29,
+  ];
+  for (let i = 0; i < 100; i++) {
+    const rul = seeds[i] ?? Math.max(5, 200 - i * 2);
+    const stage = rul > 100 ? 0 : rul > 30 ? 1 : 2;
+    const dispatch = stage === 0 ? 'CLEARED' : stage === 1 ? 'BORESCOPE DUE' : 'AOG GROUND';
+    const stations = ['HPC', 'LPT', 'Combustor'];
+    const wears    = ['Ps30 drop', 'T50 rise', 'phi drift'];
+    const si = i % 3;
+    fleet.push({
+      engine_id: i + 1,
+      tail_number: `CFM56-SN${1001 + i}`,
+      cycles_flown: 200 - Math.round(rul * 0.6),
+      rul,
+      health_stage: stage,
+      health_label: ['Healthy','Degrading','Critical'][stage],
+      dispatch_status: dispatch,
+      primary_station: stations[si],
+      wear_driver: wears[si],
+      risk_score: Math.max(4, Math.min(98, Math.round((1 - Math.min(rul, 125) / 125) * 100))),
+    });
+  }
+  return fleet;
+}
+
 export default function FleetMatrixView({ fleetData, onSelectEngine, onClose }) {
   const [filterStage, setFilterStage] = useState('ALL');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('RUL_ASC');
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [sortBy, setSortBy]           = useState('RUL_ASC');
 
-  const fleet = fleetData?.fleet ?? [];
-  const healthyCount = fleetData?.healthy_count ?? 0;
-  const degradingCount = fleetData?.degrading_count ?? 0;
-  const criticalCount = fleetData?.critical_count ?? 0;
-  const avgRul = fleetData?.avg_fleet_rul ?? 0;
+  // Use API data if available, else synthetic
+  const rawFleet        = fleetData?.fleet?.length > 0 ? fleetData.fleet : getSyntheticFleet();
+  const healthyCount    = rawFleet.filter(e => e.health_stage === 0).length;
+  const degradingCount  = rawFleet.filter(e => e.health_stage === 1).length;
+  const criticalCount   = rawFleet.filter(e => e.health_stage === 2).length;
+  const avgRul          = fleetData?.avg_fleet_rul
+    ?? Math.round(rawFleet.reduce((a, e) => a + e.rul, 0) / rawFleet.length);
+  const isDemo          = !fleetData?.fleet?.length;
 
-  // Filter engines
-  const filteredFleet = fleet.filter(engine => {
-    if (filterStage === 'HEALTHY' && engine.health_stage !== 0) return false;
-    if (filterStage === 'DEGRADING' && engine.health_stage !== 1) return false;
+  // Filter
+  const filtered = rawFleet.filter(engine => {
+    if (filterStage === 'HEALTHY'  && engine.health_stage !== 0) return false;
+    if (filterStage === 'DEGRADING'&& engine.health_stage !== 1) return false;
     if (filterStage === 'CRITICAL' && engine.health_stage !== 2) return false;
-
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchId = String(engine.engine_id).includes(term);
-      const matchTail = engine.tail_number.toLowerCase().includes(term);
-      const matchStation = engine.primary_station.toLowerCase().includes(term);
-      if (!matchId && !matchTail && !matchStation) return false;
+      const t = searchTerm.toLowerCase();
+      return (
+        String(engine.engine_id).includes(t) ||
+        engine.tail_number.toLowerCase().includes(t) ||
+        engine.primary_station.toLowerCase().includes(t)
+      );
     }
     return true;
   });
 
-  // Sort engines
-  const sortedFleet = [...filteredFleet].sort((a, b) => {
-    if (sortBy === 'RUL_ASC') return a.rul - b.rul;
-    if (sortBy === 'RUL_DESC') return b.rul - a.rul;
+  // Sort
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'RUL_ASC')     return a.rul - b.rul;
+    if (sortBy === 'RUL_DESC')    return b.rul - a.rul;
     if (sortBy === 'CYCLES_DESC') return b.cycles_flown - a.cycles_flown;
     return a.engine_id - b.engine_id;
   });
 
+  const stageLabel = { 0: 'HEALTHY', 1: 'DEGRADING', 2: 'CRITICAL' };
+  const stageClass = { 0: 'healthy', 1: 'degrading', 2: 'critical' };
+
   return (
     <div className="fleet-matrix-container tactical-fleet">
-      {/* Fleet Command Header Summary */}
+      {/* ── Header ── */}
       <div className="fleet-header-panel">
         <div className="fleet-title-group">
-          <div className="fleet-badge mono">AIRLINE MRO FLEET OPERATIONS COMMAND MATRIX</div>
-          <h2>Commercial Propulsion Health & Dispatch Queue</h2>
-          <p className="fleet-desc mono">
-            Active monitoring across 100 CFM56-5B4/P powerplants (Airbus A320 Fleet). Prioritized by Remaining Useful Life (RUL) and shop visit urgency.
+          <div className="fleet-badge mono">AIRLINE MRO FLEET — PROPULSION HEALTH MATRIX</div>
+          <h2>100-Engine Fleet Status Dashboard</h2>
+          <p className="fleet-desc">
+            CFM56-5B4 / A320 Fleet — Real NASA C-MAPSS FD001 engine health predictions.
+            {isDemo && <span className="demo-tag"> (Demo data — API offline)</span>}
           </p>
         </div>
 
         <div className="fleet-metrics-strip">
           <div className="fleet-metric-card total">
-            <span className="fm-label mono">TOTAL POWERPLANTS</span>
-            <span className="fm-val mono tabular-num">100</span>
-            <span className="fm-sub mono">A320-214 Fleet</span>
+            <span className="fm-num mono">{rawFleet.length}</span>
+            <span className="fm-label">TOTAL ENGINES</span>
+            <span className="fm-sub">CFM56-5B4 Fleet</span>
           </div>
-
           <div
             className={`fleet-metric-card healthy ${filterStage === 'HEALTHY' ? 'active' : ''}`}
             onClick={() => setFilterStage(filterStage === 'HEALTHY' ? 'ALL' : 'HEALTHY')}
-            title="Filter airworthy engines"
           >
-            <span className="fm-label mono">LINE CLEARED</span>
-            <span className="fm-val mono tabular-num">{healthyCount}</span>
-            <span className="fm-sub mono">RUL &gt; 100 cycles</span>
+            <span className="fm-num mono healthy-txt">{healthyCount}</span>
+            <span className="fm-label">LINE CLEARED</span>
+            <span className="fm-sub">RUL &gt; 100 cycles</span>
           </div>
-
           <div
             className={`fleet-metric-card degrading ${filterStage === 'DEGRADING' ? 'active' : ''}`}
             onClick={() => setFilterStage(filterStage === 'DEGRADING' ? 'ALL' : 'DEGRADING')}
-            title="Filter scheduled borescope queue"
           >
-            <span className="fm-label mono">BORESCOPE QUEUE</span>
-            <span className="fm-val mono tabular-num">{degradingCount}</span>
-            <span className="fm-sub mono">30 &lt; RUL &le; 100c</span>
+            <span className="fm-num mono warn-txt">{degradingCount}</span>
+            <span className="fm-label">BORESCOPE DUE</span>
+            <span className="fm-sub">30 &lt; RUL ≤ 100</span>
           </div>
-
           <div
             className={`fleet-metric-card critical ${filterStage === 'CRITICAL' ? 'active' : ''}`}
             onClick={() => setFilterStage(filterStage === 'CRITICAL' ? 'ALL' : 'CRITICAL')}
-            title="Filter critical AOG grounding queue"
           >
-            <span className="fm-label mono">CRITICAL AOG ALERT</span>
-            <span className="fm-val mono tabular-num">{criticalCount}</span>
-            <span className="fm-sub mono">RUL &le; 30 cycles</span>
+            <span className="fm-num mono crit-txt">{criticalCount}</span>
+            <span className="fm-label">AOG CRITICAL</span>
+            <span className="fm-sub">RUL ≤ 30 cycles</span>
           </div>
-
           <div className="fleet-metric-card avg">
-            <span className="fm-label mono">FLEET MEAN RUL</span>
-            <span className="fm-val mono tabular-num">{avgRul}</span>
-            <span className="fm-sub mono">Flight Cycles</span>
+            <span className="fm-num mono accent-txt">{avgRul}</span>
+            <span className="fm-label">FLEET AVG RUL</span>
+            <span className="fm-sub">Flight Cycles</span>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* ── Toolbar ── */}
       <div className="fleet-toolbar">
         <div className="fleet-tabs">
-          <button
-            className={`f-tab mono ${filterStage === 'ALL' ? 'active' : ''}`}
-            onClick={() => setFilterStage('ALL')}
-          >
-            ALL POWERPLANTS (100)
-          </button>
-          <button
-            className={`f-tab crit mono ${filterStage === 'CRITICAL' ? 'active' : ''}`}
-            onClick={() => setFilterStage('CRITICAL')}
-          >
-            [AOG ALERT: {criticalCount}]
-          </button>
-          <button
-            className={`f-tab warn mono ${filterStage === 'DEGRADING' ? 'active' : ''}`}
-            onClick={() => setFilterStage('DEGRADING')}
-          >
-            [BORESCOPE DUE: {degradingCount}]
-          </button>
-          <button
-            className={`f-tab nom mono ${filterStage === 'HEALTHY' ? 'active' : ''}`}
-            onClick={() => setFilterStage('HEALTHY')}
-          >
-            [LINE CLEARED: {healthyCount}]
-          </button>
+          {[
+            { key: 'ALL',       label: `All (${rawFleet.length})`, cls: '' },
+            { key: 'CRITICAL',  label: `AOG Alert (${criticalCount})`, cls: 'crit' },
+            { key: 'DEGRADING', label: `Borescope Due (${degradingCount})`, cls: 'warn' },
+            { key: 'HEALTHY',   label: `Cleared (${healthyCount})`, cls: 'nom' },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              className={`f-tab ${tab.cls} mono ${filterStage === tab.key ? 'active' : ''}`}
+              onClick={() => setFilterStage(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-
         <div className="fleet-search-group">
           <input
             type="text"
-            placeholder="Search Serial, Station (e.g. SN1034, HPC)..."
+            placeholder="Search engine # or station…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="fleet-search-input mono"
           />
-          <div className="fleet-sort-box mono">
-            <label>SORT PRIORITY:</label>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="fleet-sort-select mono">
-              <option value="RUL_ASC">Lowest RUL (Urgency First)</option>
-              <option value="RUL_DESC">Highest RUL First</option>
-              <option value="CYCLES_DESC">Highest Accumulated Cycles</option>
-              <option value="ID_ASC">Engine Index (1 - 100)</option>
-            </select>
-          </div>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="fleet-sort-select mono">
+            <option value="RUL_ASC">Urgency First (Lowest RUL)</option>
+            <option value="RUL_DESC">Healthiest First</option>
+            <option value="CYCLES_DESC">Most Flight Cycles</option>
+            <option value="ID_ASC">Engine ID Order</option>
+          </select>
         </div>
       </div>
 
-      {/* 100-Engine Cards Grid */}
-      <div className="fleet-grid">
-        {sortedFleet.map(engine => {
-          const isCrit = engine.health_stage === 2;
-          const isWarn = engine.health_stage === 1;
-          const statusClass = isCrit ? 'critical' : isWarn ? 'degrading' : 'healthy';
+      {/* ── Engine Cards Grid ── */}
+      {sorted.length === 0 ? (
+        <div className="fleet-empty">No engines match the current filter.</div>
+      ) : (
+        <div className="fleet-grid">
+          {sorted.map(engine => {
+            const cls = stageClass[engine.health_stage] ?? 'healthy';
+            const lbl = stageLabel[engine.health_stage] ?? 'HEALTHY';
+            const barPct = Math.min(100, engine.risk_score);
 
-          return (
-            <div
-              key={engine.engine_id}
-              className={`fleet-engine-card ${statusClass}`}
-              onClick={() => onSelectEngine(engine.engine_id)}
-            >
-              <div className="fcard-header">
-                <div className="fcard-tail">
-                  <span className="fcard-id mono">ENGINE #{String(engine.engine_id).padStart(3, '0')}</span>
-                  <span className="fcard-sn mono">{engine.tail_number}</span>
+            return (
+              <div
+                key={engine.engine_id}
+                className={`fleet-engine-card ${cls}`}
+                onClick={() => onSelectEngine(engine.engine_id)}
+                title="Click to open Engine Twin View"
+              >
+                {/* Card header */}
+                <div className="fcard-header">
+                  <div>
+                    <div className="fcard-id mono">ENG #{String(engine.engine_id).padStart(3, '0')}</div>
+                    <div className="fcard-sn mono">{engine.tail_number}</div>
+                  </div>
+                  <span className={`fcard-status-badge ${cls}`}>{lbl}</span>
                 </div>
-                <span className={`fcard-status-badge mono ${statusClass}`}>
-                  [{engine.dispatch_status}]
-                </span>
-              </div>
 
-              <div className="fcard-body">
+                {/* RUL big number */}
                 <div className="fcard-rul-box">
-                  <span className="fcard-rul-num mono tabular-num">{engine.rul}</span>
-                  <span className="fcard-rul-label mono">RUL CYCLES</span>
+                  <span className={`fcard-rul-num mono ${cls}-txt`}>{engine.rul}</span>
+                  <span className="fcard-rul-label">cycles RUL</span>
                 </div>
 
+                {/* Details */}
                 <div className="fcard-details mono">
                   <div className="fcard-detail-row">
-                    <span>Cycles Flown:</span>
-                    <strong className="tabular-num">{engine.cycles_flown} flights</strong>
+                    <span>Cycles flown</span>
+                    <strong>{engine.cycles_flown}</strong>
                   </div>
                   <div className="fcard-detail-row">
-                    <span>Critical Station:</span>
+                    <span>Wear zone</span>
                     <strong>{engine.primary_station}</strong>
                   </div>
                   <div className="fcard-detail-row">
-                    <span>Wear Vector:</span>
-                    <strong style={{ fontSize: 9.5 }}>{engine.wear_driver}</strong>
+                    <span>Driver</span>
+                    <strong style={{fontSize:'9.5px'}}>{engine.wear_driver}</strong>
                   </div>
                 </div>
-              </div>
 
-              {/* Risk Meter Bar */}
-              <div className="fcard-risk-bar">
-                <div
-                  className={`fcard-risk-fill ${statusClass}`}
-                  style={{ width: `${engine.risk_score}%` }}
-                />
+                {/* Risk bar */}
+                <div className="fcard-risk-bar">
+                  <div className={`fcard-risk-fill ${cls}`} style={{ width: `${barPct}%` }} />
+                </div>
+                <div className="fcard-footer mono">
+                  <span>Risk: {engine.risk_score}%</span>
+                  <span className="fcard-action">{engine.dispatch_status} →</span>
+                </div>
               </div>
-
-              <div className="fcard-footer mono">
-                <span className="fcard-risk-txt">RISK ENVELOPE: {engine.risk_score}%</span>
-                <span className="fcard-inspect-btn">
-                  [INSPECT TWIN →]
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
