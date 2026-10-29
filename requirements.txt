@@ -1,6 +1,21 @@
-pandas>=2.0
-numpy>=1.24
-scikit-learn>=1.2
-imbalanced-learn>=0.11
-matplotlib>=3.7
-seaborn>=0.12
+# Core Data Science & Machine Learning
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.2.0
+imbalanced-learn>=0.11.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+tensorflow>=2.15.0
+shap>=0.44.0
+
+# Backend & REST API
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Document & Presentation Generation
+reportlab>=4.0.0
+python-docx>=1.1.0
+python-pptx>=0.6.23
+qrcode>=7.4.2
+pypdf>=4.0.0
+Pillow>=10.0.0

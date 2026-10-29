@@ -1,14 +1,70 @@
+# ==============================
+# PYTHON
+# ==============================
 __pycache__/
 *.py[cod]
-*.pkl
-*.csv
 *.egg-info/
-.env
 .venv/
 venv/
+env/
+
+# ==============================
+# MODEL FILES
+# ==============================
+*.pkl
+*.joblib
+*.h5
+!models/*.pkl
+!models/*.joblib
+!models/*.h5
+
+# ==============================
+# ENVIRONMENT VARIABLES / SECRETS
+# ==============================
+.env
+.env.*
+!.env.example
+
+# ==============================
+# NODE.JS / REACT / VITE
+# ==============================
 node_modules/
+dashboard/node_modules/
 dist/
+dashboard/dist/
 .vite/
+dashboard/.vite/
+
+# ==============================
+# GENERATED DATA
+# ==============================
+data/processed/
+data/interim/
+
+# ==============================
+# JUPYTER
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# LOGS
+# ==============================
 *.log
+
+# ==============================
+# IDE / EDITOR
+# ==============================
+.vscode/
+.idea/
+
+# ==============================
+# OPERATING SYSTEM
+# ==============================
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# ==============================
+# OFFICE TEMPORARY FILES
+# ==============================
+~$*

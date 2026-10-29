@@ -1,0 +1,25 @@
+{
+  "FD001": [
+    "T2",
+    "P2",
+    "Nc",
+    "epr",
+    "NRc",
+    "farB",
+    "Nf_dmd",
+    "PCNfR_dmd"
+  ],
+  "FD002": [],
+  "FD003": [
+    "T2",
+    "P2",
+    "Nf",
+    "Nc",
+    "NRf",
+    "NRc",
+    "farB",
+    "Nf_dmd",
+    "PCNfR_dmd"
+  ],
+  "FD004": []
+}
